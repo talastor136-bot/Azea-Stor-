@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Azea Stor</title>
+    <style>
+        body { background: #0f172a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; text-align: center; }
+        .welcome { margin-top: 30px; animation: fadeIn 2s; }
+        .admin-trigger { position: fixed; top: 0; right: 0; width: 50px; height: 50px; cursor: pointer; opacity: 0; }
+        .admin-box { display: none; background: #1e293b; padding: 20px; border-radius: 15px; margin: 20px auto; width: 90%; max-width: 400px; }
+        input, textarea { width: 90%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; }
+        button { background: #22c55e; padding: 12px 25px; border: none; border-radius: 8px; color: white; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #16a34a; transform: scale(1.05); }
+        
+        /* تنسيق البطاقات الجديد (أصغر وأرتب) */
+        .card { 
+            background: #1e293b; 
+            margin: 10px auto; 
+            padding: 15px; 
+            border-radius: 15px; 
+            display: block; 
+            width: 85%; 
+            max-width: 320px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+            animation: slideUp 0.8s; 
+        }
+        .card h3 { font-size: 18px; margin: 5px 0; }
+        .card p { font-size: 14px; margin: 5px 0; color: #cbd5e1; }
+        .buy-btn { background: #e11d48; display: block; margin-top: 10px; text-decoration: none; padding: 10px; border-radius: 8px; color: white; font-weight: bold; width: 100%; border: none; cursor: pointer; }
+        .del-btn { display: none; background: #475569; margin-top: 10px; cursor: pointer; border: none; color: #cbd5e1; padding: 8px 15px; border-radius: 5px; font-size: 12px; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="admin-trigger" onclick="openAdmin()"></div>
+    
+    <div class="welcome">
+        <h1>مرحباً بكم في Azea Stor ✨</h1>
+        <p>اكتشفوا أفضل المنتجات بأسعار مميزة.</p>
+    </div>
+
+    <div class="admin-box" id="adminPanel">
+        <input type="text" id="pName" placeholder="اسم المنتج">
+        <input type="number" id="pPrice" placeholder="السعر">
+        <textarea id="pDesc" placeholder="وصف المنتج"></textarea>
+        <button onclick="saveProduct()">نشر المنتج</button>
+    </div>
+
+    <div id="displayArea"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxzDMDBD0dFTIuLKddHqCpb4MC_UNVOFU",
+            authDomain: "azea-stor.firebaseapp.com",
+            projectId: "azea-stor",
+            storageBucket: "azea-stor.firebasestorage.app",
+            messagingSenderId: "681412025370",
+            appId: "1:681412025370:web:99dc9ff26d9167e9c005a3",
+            measurementId: "G-73LNSBJ81P"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let isAdmin = false;
+
+        window.openAdmin = () => {
+            let pass = prompt("أدخل كلمة المرور:");
+            if(pass === "201213€£¥₩□●abc") {
+                isAdmin = true;
+                document.getElementById('adminPanel').style.display = 'block';
+                document.querySelectorAll('.del-btn').forEach(btn => btn.style.display = 'inline-block');
+            }
+        }
+
+        window.saveProduct = async () => {
+            let name = document.getElementById("pName").value;
+            let price = document.getElementById("pPrice").value;
+            let desc = document.getElementById("pDesc").value;
+            await addDoc(collection(db, "items"), { name, price, desc, sales: 0, time: Date.now() });
+            alert("تم النشر!");
+            location.reload();
+        }
+
+        window.buyProduct = async (id) => {
+            await updateDoc(doc(db, "items", id), { sales: increment(1) });
+            window.open("https://www.instagram.com/alaalqkjqj", "_blank");
+        }
+
+        window.deleteProduct = async (id) => {
+            if(confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
+                await deleteDoc(doc(db, "items", id));
+            }
+        }
+
+        onSnapshot(query(collection(db, "items"), orderBy("time", "desc")), (snap) => {
+            let area = document.getElementById("displayArea");
+            area.innerHTML = "";
+            snap.forEach(doc => {
+                let d = doc.data();
+                // إظهار الوصف فقط إذا كان مكتوباً
+                let descHtml = d.desc ? `<p>${d.desc}</p>` : "";
+                
+                area.innerHTML += `
+                    <div class="card">
+                        <h3>${d.name}</h3>
+                        ${descHtml}
+                        <p><b>${d.price} DA</b></p>
+                        <p style="font-size:11px; color:#64748b;">المبيعات: ${d.sales || 0}</p>
+                        <button onclick="buyProduct('${doc.id}')" class="buy-btn">شراء الآن</button>
+                        <button class="del-btn" style="display: ${isAdmin ? 'inline-block' : 'none'}" onclick="deleteProduct('${doc.id}')">حذف</button>
+                    </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
