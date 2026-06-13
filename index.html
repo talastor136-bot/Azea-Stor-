@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azea Stor</title>
+    <style>
+        body { background-color: #0E2F2E; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
+        h1 { color: #2EF2E2; }
+        .admin-box, #buyBox { display: none; background: #1a4a49; padding: 20px; border-radius: 15px; margin: 20px auto; width: 90%; max-width: 400px; }
+        input, textarea, select { width: 90%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; }
+        button { background-color: #2EF2E2; color: #0E2F2E; padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .card { background-color: #1a4a49; margin: 15px; padding: 15px; border-radius: 15px; display: inline-block; width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .product-img { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; }
+        .buy-btn { background-color: #2EF2E2; color: #0E2F2E; margin-top: 10px; padding: 10px; border-radius: 5px; font-weight: bold; border: none; width: 100%; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div onclick="openAdmin()" style="position:fixed; top:0; right:0; width:50px; height:50px; cursor:pointer;"></div>
+    
+    <h1>Azea Stor ✨</h1>
+
+    <div id="buyBox">
+        <h3>بيانات الطلب</h3>
+        <select id="deliveryMethod">
+            <option value="إلى باب الدار">إلى باب الدار</option>
+            <option value="إلى المكتب">إلى المكتب</option>
+        </select>
+        <input type="text" id="userCity" placeholder="اكتب الولاية/المنطقة هنا...">
+        <button onclick="confirmPurchase()">إتمام الطلب عبر الإنستغرام</button>
+    </div>
+
+    <div class="admin-box" id="adminPanel">
+        <input type="text" id="pName" placeholder="اسم المنتج">
+        <input type="number" id="pPrice" placeholder="السعر">
+        <input type="text" id="pImgUrl" placeholder="رابط الصورة">
+        <button onclick="saveProduct()">نشر المنتج</button>
+    </div>
+
+    <div id="displayArea"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxzDMDBD0dFTIuLKddHqCpb4MC_UNVOFU",
+            authDomain: "azea-stor.firebaseapp.com",
+            projectId: "azea-stor",
+            storageBucket: "azea-stor.firebasestorage.app",
+            messagingSenderId: "681412025370",
+            appId: "1:681412025370:web:99dc9ff26d9167e9c005a3",
+            measurementId: "G-73LNSBJ81P"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let selectedProduct = null;
+
+        window.openAdmin = () => {
+            let pass = prompt("كلمة المرور:");
+            if(pass === "201213€£¥₩□●abc") document.getElementById('adminPanel').style.display = 'block';
+        }
+
+        window.saveProduct = async () => {
+            await addDoc(collection(db, "items"), { 
+                name: document.getElementById("pName").value, 
+                price: document.getElementById("pPrice").value, 
+                image: document.getElementById("pImgUrl").value, 
+                time: Date.now() 
+            });
+            alert("تم النشر!");
+            location.reload();
+        }
+
+        window.initiateBuy = (name, price) => {
+            selectedProduct = {name, price};
+            document.getElementById('buyBox').style.display = 'block';
+        }
+
+        window.confirmPurchase = () => {
+            let delivery = document.getElementById("deliveryMethod").value;
+            let city = document.getElementById("userCity").value;
+            let msg = `أريد طلب منتج: ${selectedProduct.name}%0Aالسعر: ${selectedProduct.price} DA%0Aالتوصيل: ${delivery}%0Aالمنطقة: ${city}`;
+            window.open(`https://ig.me/m/azea_stor?text=${msg}`, '_blank');
+        }
+
+        onSnapshot(query(collection(db, "items"), orderBy("time", "desc")), (snap) => {
+            let area = document.getElementById("displayArea");
+            area.innerHTML = "";
+            snap.forEach(doc => {
+                let d = doc.data();
+                area.innerHTML += `
+                    <div class="card">
+                        ${d.image ? `<img src="${d.image}" class="product-img">` : ""}
+                        <h3>${d.name}</h3>
+                        <p>${d.price} DA</p>
+                        <button class="buy-btn" onclick="initiateBuy('${d.name}', '${d.price}')">شراء الآن</button>
+                    </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
